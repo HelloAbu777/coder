@@ -7,7 +7,7 @@
         <button v-for="t in tabs" :key="t.key"
           class="admin-nav-item"
           :class="{ active: activeTab === t.key }"
-          @click="activeTab = t.key">
+          @click="onTabChange(t.key)">
           <i :class="t.icon"></i>
           <span>{{ t.label }}</span>
         </button>
@@ -30,7 +30,7 @@
         </div>
       </div>
 
-      <!-- Foydalanuvchilar -->
+      <!-- ======================== FOYDALANUVCHILAR ======================== -->
       <section v-if="activeTab === 'users'" class="admin-section">
         <div class="admin-section-header">
           <h3>Foydalanuvchilar</h3>
@@ -54,7 +54,10 @@
                 <td>
                   <div class="user-name-cell">
                     <div class="user-avatar">{{ u.name?.charAt(0)?.toUpperCase() }}</div>
-                    {{ u.name }}
+                    <div>
+                      <div>{{ u.name }}</div>
+                      <div style="font-size:0.72rem;color:#64748b">@{{ u.username }}</div>
+                    </div>
                   </div>
                 </td>
                 <td class="text-muted">{{ u.email }}</td>
@@ -89,7 +92,7 @@
         </div>
       </section>
 
-      <!-- To'lovlar -->
+      <!-- ======================== TO'LOVLAR ======================== -->
       <section v-if="activeTab === 'payments'" class="admin-section">
         <div class="admin-section-header">
           <h3>To'lovlar</h3>
@@ -125,7 +128,188 @@
         </div>
       </section>
 
-      <!-- Video qo'shish -->
+      <!-- ======================== MOLIYA ======================== -->
+      <section v-if="activeTab === 'finance'" class="admin-section">
+        <div class="admin-section-header">
+          <h3>Moliyaviy hisobot</h3>
+        </div>
+
+        <div v-if="financeLoading" class="text-center py-5" style="color:#64748b">
+          <div class="spinner-border mb-2" style="color:#4f46e5"></div>
+          <div>Yuklanmoqda...</div>
+        </div>
+
+        <div v-else>
+          <!-- Finance cards -->
+          <div class="finance-cards">
+            <div class="finance-card green">
+              <div class="fc-icon"><i class="bi bi-cash-stack"></i></div>
+              <div class="fc-val">{{ formatMoney(finance.totalRevenue) }}</div>
+              <div class="fc-lbl">Jami kirim</div>
+              <div class="fc-sub">{{ finance.totalPaidCount }} ta to'lov</div>
+            </div>
+            <div class="finance-card blue">
+              <div class="fc-icon"><i class="bi bi-calendar-check"></i></div>
+              <div class="fc-val">{{ formatMoney(finance.thisMonthRevenue) }}</div>
+              <div class="fc-lbl">Bu oy</div>
+              <div class="fc-sub">{{ finance.thisMonthCount }} ta yangi</div>
+            </div>
+            <div class="finance-card yellow">
+              <div class="fc-icon"><i class="bi bi-calendar-minus"></i></div>
+              <div class="fc-val">{{ formatMoney(finance.lastMonthRevenue) }}</div>
+              <div class="fc-lbl">O'tgan oy</div>
+              <div class="fc-sub">solishtirish uchun</div>
+            </div>
+            <div class="finance-card red">
+              <div class="fc-icon"><i class="bi bi-arrow-counterclockwise"></i></div>
+              <div class="fc-val">{{ formatMoney(finance.refundTotal) }}</div>
+              <div class="fc-lbl">Qaytarilgan</div>
+              <div class="fc-sub">{{ finance.refundCount }} ta</div>
+            </div>
+            <div class="finance-card purple">
+              <div class="fc-icon"><i class="bi bi-graph-up-arrow"></i></div>
+              <div class="fc-val">{{ formatMoney(finance.netRevenue) }}</div>
+              <div class="fc-lbl">Sof daromad</div>
+              <div class="fc-sub">kirim − qaytarilgan</div>
+            </div>
+          </div>
+
+          <!-- Oylik jadval -->
+          <div class="finance-chart-wrap mt-4">
+            <h5 class="fw-semibold mb-4" style="color:#f1f5f9">
+              <i class="bi bi-bar-chart me-2" style="color:#4f46e5"></i>Oylik kirim
+            </h5>
+            <div v-if="finance.monthly?.length === 0" class="text-center py-4" style="color:#64748b">
+              Hali to'lov yo'q
+            </div>
+            <div v-else>
+              <!-- Bar chart -->
+              <div class="bar-chart">
+                <div v-for="m in finance.monthly" :key="m.label" class="bar-item">
+                  <div class="bar-wrap">
+                    <div
+                      class="bar-fill"
+                      :style="`height: ${maxMonthly > 0 ? Math.round((m.total / maxMonthly) * 100) : 0}%`"
+                      :title="`${m.label}: ${formatMoney(m.total)}`">
+                    </div>
+                  </div>
+                  <div class="bar-val">{{ formatMoneyShort(m.total) }}</div>
+                  <div class="bar-lbl">{{ m.label }}</div>
+                </div>
+              </div>
+
+              <!-- Jadval -->
+              <table class="admin-table mt-4">
+                <thead>
+                  <tr>
+                    <th>Oy</th>
+                    <th>To'lovlar soni</th>
+                    <th>Summa</th>
+                    <th>O'sish</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(m, i) in [...finance.monthly].reverse()" :key="m.label">
+                    <td class="fw-semibold" style="color:#f1f5f9">{{ m.label }}</td>
+                    <td>{{ m.count }} ta</td>
+                    <td style="color:#10b981;font-weight:700">{{ formatMoney(m.total) }}</td>
+                    <td>
+                      <span v-if="i < finance.monthly.length - 1">
+                        <span v-if="m.total > finance.monthly[finance.monthly.length - 2 - i]?.total" style="color:#10b981">
+                          <i class="bi bi-arrow-up"></i>
+                          +{{ Math.round(((m.total - finance.monthly[finance.monthly.length - 2 - i].total) / finance.monthly[finance.monthly.length - 2 - i].total) * 100) }}%
+                        </span>
+                        <span v-else-if="m.total < finance.monthly[finance.monthly.length - 2 - i]?.total" style="color:#ef4444">
+                          <i class="bi bi-arrow-down"></i>
+                        </span>
+                        <span v-else style="color:#64748b">—</span>
+                      </span>
+                      <span v-else style="color:#64748b">—</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================== CHAT BOSHQARUV ======================== -->
+      <section v-if="activeTab === 'chat'" class="admin-section">
+        <div class="admin-section-header">
+          <h3>Chat boshqaruv</h3>
+          <span class="badge-count">{{ chatRooms.length }} xona</span>
+        </div>
+
+        <div class="chat-admin-layout">
+          <!-- Xonalar ro'yxati -->
+          <div class="chat-rooms-list">
+            <div
+              v-for="room in chatRooms" :key="room._id"
+              class="chat-room-item"
+              :class="{ active: selectedRoom === room._id }"
+              @click="selectChatRoom(room._id)">
+              <div class="room-icon">
+                <i v-if="room._id === 'general'" class="bi bi-people-fill"></i>
+                <i v-else class="bi bi-person-fill"></i>
+              </div>
+              <div class="room-info">
+                <div class="room-name">{{ formatRoomName(room._id) }}</div>
+                <div class="room-meta">{{ room.count }} xabar</div>
+              </div>
+              <button class="clear-room-btn" @click.stop="clearRoom(room._id)" title="Xonani tozalash">
+                <i class="bi bi-trash3-fill"></i>
+              </button>
+            </div>
+
+            <div v-if="chatRooms.length === 0" class="empty-rooms">
+              <i class="bi bi-chat-slash"></i>
+              <p>Xonalar yo'q</p>
+            </div>
+          </div>
+
+          <!-- Xabarlar -->
+          <div class="chat-messages-panel">
+            <div v-if="!selectedRoom" class="msg-empty">
+              <i class="bi bi-chat-square-dots"></i>
+              <p>Xona tanlang</p>
+            </div>
+
+            <div v-else>
+              <div class="msg-panel-header">
+                <span class="fw-semibold" style="color:#f1f5f9">{{ formatRoomName(selectedRoom) }}</span>
+                <button class="danger-clear-btn" @click="clearRoom(selectedRoom)">
+                  <i class="bi bi-trash3 me-1"></i>Xonani to'liq tozalash
+                </button>
+              </div>
+
+              <div class="msg-list" ref="msgListEl">
+                <div v-if="chatMessages.length === 0" class="msg-empty-inner">
+                  <i class="bi bi-chat-dots"></i>
+                  <p>Xabar yo'q</p>
+                </div>
+                <div v-for="msg in chatMessages" :key="msg._id" class="msg-row">
+                  <div class="msg-sender-avatar">{{ msg.sender?.name?.charAt(0)?.toUpperCase() }}</div>
+                  <div class="msg-body">
+                    <div class="msg-meta">
+                      <span class="msg-sender">{{ msg.sender?.name }}</span>
+                      <span v-if="msg.sender?.username" class="msg-username">@{{ msg.sender.username }}</span>
+                      <span class="msg-role-badge" :class="msg.sender?.role">{{ msg.sender?.role }}</span>
+                      <span class="msg-time">{{ formatMsgTime(msg.createdAt) }}</span>
+                    </div>
+                    <div class="msg-content">{{ msg.content }}</div>
+                  </div>
+                  <button class="msg-del-btn" @click="deleteAdminMsg(msg._id)" title="O'chirish">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================== VIDEO QO'SHISH ======================== -->
       <section v-if="activeTab === 'videos'" class="admin-section">
         <div class="admin-section-header">
           <h3>Video qo'shish</h3>
@@ -163,7 +347,6 @@
               </div>
             </div>
 
-            <!-- Yuklash turi -->
             <div class="upload-type-tabs">
               <button type="button" class="upload-tab" :class="{ active: uploadType === 'youtube' }" @click="uploadType = 'youtube'">
                 <i class="bi bi-youtube me-2"></i>YouTube
@@ -173,13 +356,11 @@
               </button>
             </div>
 
-            <!-- YouTube URL -->
             <div v-if="uploadType === 'youtube'" class="admin-field">
               <label>YouTube URL</label>
               <input v-model="videoForm.url" type="url" placeholder="https://youtube.com/watch?v=..." />
             </div>
 
-            <!-- Fayl yuklash -->
             <div v-if="uploadType === 'file'" class="admin-field">
               <label>Video fayl</label>
               <div class="file-drop-zone" @click="$refs.fileInput.click()" @dragover.prevent @drop.prevent="onDrop">
@@ -220,7 +401,7 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../utils/axios.js';
 
@@ -232,12 +413,30 @@ export default {
     const tabs = [
       { key: 'users', label: 'Foydalanuvchilar', icon: 'bi bi-people' },
       { key: 'payments', label: "To'lovlar", icon: 'bi bi-credit-card' },
-      { key: 'videos', label: 'Video qo\'shish', icon: 'bi bi-play-circle' }
+      { key: 'finance', label: 'Moliya', icon: 'bi bi-graph-up' },
+      { key: 'chat', label: 'Chat', icon: 'bi bi-chat-dots' },
+      { key: 'videos', label: 'Video', icon: 'bi bi-play-circle' }
     ];
 
+    // Users & payments
     const users = ref([]);
     const payments = ref([]);
     const statsCards = ref([]);
+
+    // Finance
+    const finance = ref({});
+    const financeLoading = ref(false);
+    const maxMonthly = computed(() =>
+      Math.max(...(finance.value.monthly?.map((m) => m.total) || [1]))
+    );
+
+    // Chat
+    const chatRooms = ref([]);
+    const chatMessages = ref([]);
+    const selectedRoom = ref(null);
+    const msgListEl = ref(null);
+
+    // Video
     const sectionList = ['HTML', 'CSS', 'JavaScript', 'Node.js', 'Python'];
     const videoLoading = ref(false);
     const videoSuccess = ref(false);
@@ -246,12 +445,9 @@ export default {
     const selectedFile = ref(null);
     const uploadProgress = ref(0);
     const fileInput = ref(null);
+    const videoForm = reactive({ title: '', url: '', section: 'HTML', order: 1, description: '', duration: 0 });
 
-    const videoForm = reactive({
-      title: '', url: '', section: 'HTML',
-      order: 1, description: '', duration: 0
-    });
-
+    // ---- Load ----
     const loadData = async () => {
       try {
         const [statsRes, usersRes, paymentsRes] = await Promise.all([
@@ -263,7 +459,7 @@ export default {
         statsCards.value = [
           { icon: 'bi bi-people-fill', value: s.totalUsers, label: "O'quvchilar" },
           { icon: 'bi bi-credit-card-fill', value: s.totalPaid, label: "To'langan" },
-          { icon: 'bi bi-cash-stack', value: `${(s.totalRevenue / 1000).toFixed(0)}K so'm`, label: 'Daromad' },
+          { icon: 'bi bi-cash-stack', value: `${(s.totalRevenue / 1000000).toFixed(1)}M so'm`, label: 'Daromad' },
           { icon: 'bi bi-play-circle-fill', value: s.totalVideos, label: 'Videolar' }
         ];
         users.value = usersRes.data;
@@ -271,6 +467,77 @@ export default {
       } catch (_) {}
     };
 
+    const loadFinance = async () => {
+      financeLoading.value = true;
+      try {
+        const { data } = await api.get('/admin/finance');
+        finance.value = data;
+      } catch (_) {} finally {
+        financeLoading.value = false;
+      }
+    };
+
+    const loadChatRooms = async () => {
+      try {
+        const { data } = await api.get('/admin/chat/rooms');
+        chatRooms.value = data;
+      } catch (_) {}
+    };
+
+    const selectChatRoom = async (roomId) => {
+      selectedRoom.value = roomId;
+      try {
+        const { data } = await api.get(`/admin/chat/${roomId}/messages`);
+        chatMessages.value = data;
+        await nextTick();
+        if (msgListEl.value) msgListEl.value.scrollTop = msgListEl.value.scrollHeight;
+      } catch (_) {}
+    };
+
+    // ---- Finance ----
+    const formatMoney = (val) => {
+      if (!val) return '0 so\'m';
+      return `${Number(val).toLocaleString('uz-UZ')} so'm`;
+    };
+    const formatMoneyShort = (val) => {
+      if (!val) return '0';
+      if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M`;
+      if (val >= 1000) return `${(val / 1000).toFixed(0)}K`;
+      return String(val);
+    };
+
+    // ---- Chat ----
+    const formatRoomName = (roomId) => {
+      if (roomId === 'general') return 'Umumiy chat';
+      if (roomId?.startsWith('private-')) return `Shaxsiy: ${roomId.replace('private-', '').slice(0, 8)}...`;
+      return roomId;
+    };
+
+    const formatMsgTime = (date) => {
+      if (!date) return '';
+      return new Date(date).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    };
+
+    const clearRoom = async (roomId) => {
+      if (!confirm(`"${formatRoomName(roomId)}" xonasidagi barcha xabarlar o'chiriladi. Davom etasizmi?`)) return;
+      try {
+        await api.delete(`/admin/chat/${roomId}/clear`);
+        chatMessages.value = [];
+        const room = chatRooms.value.find((r) => r._id === roomId);
+        if (room) room.count = 0;
+      } catch (_) {}
+    };
+
+    const deleteAdminMsg = async (id) => {
+      try {
+        await api.delete(`/admin/chat/message/${id}`);
+        chatMessages.value = chatMessages.value.filter((m) => m._id !== id);
+        const room = chatRooms.value.find((r) => r._id === selectedRoom.value);
+        if (room && room.count > 0) room.count--;
+      } catch (_) {}
+    };
+
+    // ---- Users ----
     const toggleBlock = async (u) => {
       try {
         await api.put(`/admin/users/${u._id}/block`);
@@ -311,20 +578,15 @@ export default {
       } catch (_) {}
     };
 
-    const onFileChange = (e) => {
-      selectedFile.value = e.target.files[0] || null;
-    };
-
-    const onDrop = (e) => {
-      selectedFile.value = e.dataTransfer.files[0] || null;
-    };
+    // ---- Video ----
+    const onFileChange = (e) => { selectedFile.value = e.target.files[0] || null; };
+    const onDrop = (e) => { selectedFile.value = e.dataTransfer.files[0] || null; };
 
     const addVideo = async () => {
       videoLoading.value = true;
       videoSuccess.value = false;
       videoError.value = '';
       uploadProgress.value = 0;
-
       try {
         if (uploadType.value === 'file' && selectedFile.value) {
           const formData = new FormData();
@@ -334,17 +596,13 @@ export default {
           formData.append('order', videoForm.order);
           formData.append('description', videoForm.description);
           formData.append('duration', videoForm.duration);
-
           await api.post('/videos/upload', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
-            onUploadProgress: (e) => {
-              uploadProgress.value = Math.round((e.loaded / e.total) * 100);
-            }
+            onUploadProgress: (e) => { uploadProgress.value = Math.round((e.loaded / e.total) * 100); }
           });
         } else {
           await api.post('/videos', { ...videoForm });
         }
-
         videoSuccess.value = true;
         selectedFile.value = null;
         uploadProgress.value = 0;
@@ -363,49 +621,37 @@ export default {
       router.push('/admin/login');
     };
 
+    const onTabChange = (key) => {
+      activeTab.value = key;
+      if (key === 'finance' && !finance.value.totalRevenue) loadFinance();
+      if (key === 'chat' && chatRooms.value.length === 0) loadChatRooms();
+    };
+
     onMounted(loadData);
 
     return {
-      activeTab, tabs, users, payments, statsCards, sectionList,
-      videoLoading, videoSuccess, videoError, uploadType,
-      selectedFile, uploadProgress, fileInput, videoForm,
+      activeTab, tabs, users, payments, statsCards,
+      finance, financeLoading, maxMonthly,
+      chatRooms, chatMessages, selectedRoom, msgListEl,
+      sectionList, videoLoading, videoSuccess, videoError,
+      uploadType, selectedFile, uploadProgress, fileInput, videoForm,
+      formatMoney, formatMoneyShort, formatRoomName, formatMsgTime,
+      loadFinance, loadChatRooms, selectChatRoom, clearRoom, deleteAdminMsg,
       toggleBlock, makeMentor, changeUserRole, deleteUser, refund,
-      onFileChange, onDrop, addVideo, logout
+      onFileChange, onDrop, addVideo, logout, onTabChange
     };
   }
 };
 </script>
 
 <style scoped>
-.admin-layout {
-  display: flex; min-height: 100vh;
-  background: #0a0a14; color: #e2e8f0;
-}
+.admin-layout { display: flex; min-height: 100vh; background: #0a0a14; color: #e2e8f0; }
 
 /* Sidebar */
-.admin-sidebar {
-  width: 240px; flex-shrink: 0;
-  background: #0f0f1e;
-  border-right: 1px solid rgba(79,70,229,0.15);
-  display: flex; flex-direction: column;
-  padding: 1.5rem 1rem;
-  position: sticky; top: 0; height: 100vh;
-}
-.admin-brand {
-  font-size: 1.4rem; font-weight: 900; letter-spacing: 2px;
-  background: linear-gradient(135deg,#4f46e5,#a855f7);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  padding: 0 0.5rem; margin-bottom: 2rem;
-}
+.admin-sidebar { width: 240px; flex-shrink: 0; background: #0f0f1e; border-right: 1px solid rgba(79,70,229,0.15); display: flex; flex-direction: column; padding: 1.5rem 1rem; position: sticky; top: 0; height: 100vh; }
+.admin-brand { font-size: 1.4rem; font-weight: 900; letter-spacing: 2px; background: linear-gradient(135deg,#4f46e5,#a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; padding: 0 0.5rem; margin-bottom: 2rem; }
 .admin-nav { display: flex; flex-direction: column; gap: 0.3rem; flex: 1; }
-.admin-nav-item {
-  display: flex; align-items: center; gap: 0.75rem;
-  padding: 0.75rem 1rem; border-radius: 10px;
-  border: none; background: transparent;
-  color: #64748b; font-size: 0.9rem;
-  cursor: pointer; transition: all 0.2s;
-  text-decoration: none;
-}
+.admin-nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 10px; border: none; background: transparent; color: #64748b; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; text-decoration: none; width: 100%; }
 .admin-nav-item:hover { background: rgba(79,70,229,0.1); color: #a5b4fc; }
 .admin-nav-item.active { background: rgba(79,70,229,0.15); color: #818cf8; border-left: 2px solid #4f46e5; }
 .admin-nav-item.mt-auto { margin-top: auto; }
@@ -414,15 +660,8 @@ export default {
 .admin-main { flex: 1; padding: 2rem; overflow-y: auto; }
 
 /* Stats */
-.admin-stats {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem; margin-bottom: 2rem;
-}
-.admin-stat-card {
-  background: #0f0f1e; border: 1px solid rgba(79,70,229,0.15);
-  border-radius: 14px; padding: 1.5rem; text-align: center;
-  transition: border-color 0.2s;
-}
+.admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+.admin-stat-card { background: #0f0f1e; border: 1px solid rgba(79,70,229,0.15); border-radius: 14px; padding: 1.5rem; text-align: center; transition: border-color 0.2s; }
 .admin-stat-card:hover { border-color: rgba(79,70,229,0.4); }
 .admin-stat-icon { font-size: 1.8rem; color: #4f46e5; display: block; margin-bottom: 0.5rem; }
 .admin-stat-value { font-size: 1.8rem; font-weight: 800; color: #f1f5f9; }
@@ -468,8 +707,87 @@ export default {
 .action-btn { width: 30px; height: 30px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; transition: opacity 0.2s; }
 .action-btn:hover { opacity: 0.8; }
 .action-btn.warn { background: rgba(245,158,11,0.15); color: #fcd34d; }
-.action-btn.info { background: rgba(59,130,246,0.15); color: #93c5fd; }
 .action-btn.danger { background: rgba(239,68,68,0.15); color: #fca5a5; }
+
+/* ===== FINANCE ===== */
+.finance-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+.finance-card { border-radius: 14px; padding: 1.25rem; border: 1px solid transparent; }
+.finance-card.green { background: rgba(16,185,129,0.07); border-color: rgba(16,185,129,0.2); }
+.finance-card.blue { background: rgba(59,130,246,0.07); border-color: rgba(59,130,246,0.2); }
+.finance-card.yellow { background: rgba(245,158,11,0.07); border-color: rgba(245,158,11,0.2); }
+.finance-card.red { background: rgba(239,68,68,0.07); border-color: rgba(239,68,68,0.2); }
+.finance-card.purple { background: rgba(124,58,237,0.07); border-color: rgba(124,58,237,0.2); }
+.fc-icon { font-size: 1.4rem; margin-bottom: 0.6rem; }
+.finance-card.green .fc-icon { color: #10b981; }
+.finance-card.blue .fc-icon { color: #3b82f6; }
+.finance-card.yellow .fc-icon { color: #f59e0b; }
+.finance-card.red .fc-icon { color: #ef4444; }
+.finance-card.purple .fc-icon { color: #7c3aed; }
+.fc-val { font-size: 1.2rem; font-weight: 800; color: #f1f5f9; margin-bottom: 0.2rem; }
+.fc-lbl { font-size: 0.82rem; font-weight: 600; color: #94a3b8; }
+.fc-sub { font-size: 0.72rem; color: #64748b; margin-top: 0.15rem; }
+
+.finance-chart-wrap { background: rgba(15,15,30,0.5); border: 1px solid rgba(79,70,229,0.1); border-radius: 14px; padding: 1.5rem; }
+
+/* Bar chart */
+.bar-chart { display: flex; align-items: flex-end; gap: 0.75rem; height: 160px; padding-bottom: 2rem; }
+.bar-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; height: 100%; }
+.bar-wrap { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.bar-fill { width: 100%; min-height: 4px; background: linear-gradient(180deg, #7c3aed, #4f46e5); border-radius: 6px 6px 0 0; transition: height 0.5s ease; }
+.bar-val { font-size: 0.68rem; font-weight: 700; color: #818cf8; }
+.bar-lbl { font-size: 0.65rem; color: #64748b; text-align: center; }
+
+/* ===== CHAT ADMIN ===== */
+.chat-admin-layout { display: flex; gap: 1rem; height: 580px; }
+
+.chat-rooms-list { width: 260px; flex-shrink: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 0.3rem; }
+
+.chat-room-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.8rem; border-radius: 10px; border: 1px solid transparent; cursor: pointer; transition: all 0.2s; }
+.chat-room-item:hover { background: rgba(79,70,229,0.08); border-color: rgba(79,70,229,0.15); }
+.chat-room-item.active { background: rgba(79,70,229,0.15); border-color: rgba(79,70,229,0.3); }
+
+.room-icon { width: 36px; height: 36px; background: rgba(79,70,229,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #818cf8; flex-shrink: 0; }
+.room-name { font-size: 0.85rem; font-weight: 600; color: #f1f5f9; }
+.room-meta { font-size: 0.72rem; color: #64748b; }
+.room-info { flex: 1; overflow: hidden; }
+
+.clear-room-btn { background: none; border: none; color: transparent; cursor: pointer; padding: 4px; border-radius: 6px; transition: all 0.15s; font-size: 0.8rem; }
+.chat-room-item:hover .clear-room-btn { color: #ef4444; }
+.clear-room-btn:hover { background: rgba(239,68,68,0.12); }
+
+.empty-rooms { text-align: center; padding: 2rem; color: #64748b; }
+.empty-rooms i { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
+
+.chat-messages-panel { flex: 1; background: rgba(10,10,20,0.5); border: 1px solid rgba(79,70,229,0.12); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+
+.msg-empty, .msg-empty-inner { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; color: #475569; gap: 0.5rem; }
+.msg-empty i, .msg-empty-inner i { font-size: 2rem; }
+
+.msg-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; border-bottom: 1px solid rgba(79,70,229,0.12); background: rgba(15,15,30,0.8); flex-shrink: 0; }
+
+.danger-clear-btn { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; padding: 5px 14px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+.danger-clear-btn:hover { background: rgba(239,68,68,0.22); }
+
+.msg-list { flex: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+
+.msg-row { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.6rem; border-radius: 8px; transition: background 0.15s; }
+.msg-row:hover { background: rgba(79,70,229,0.06); }
+.msg-row:hover .msg-del-btn { opacity: 1; }
+
+.msg-sender-avatar { width: 30px; height: 30px; border-radius: 50%; background: rgba(79,70,229,0.2); display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; color: #818cf8; flex-shrink: 0; }
+.msg-body { flex: 1; }
+.msg-meta { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; flex-wrap: wrap; }
+.msg-sender { font-size: 0.82rem; font-weight: 600; color: #a5b4fc; }
+.msg-username { font-size: 0.72rem; color: #64748b; }
+.msg-role-badge { font-size: 0.65rem; padding: 1px 6px; border-radius: 8px; }
+.msg-role-badge.admin { background: rgba(124,58,237,0.2); color: #c4b5fd; }
+.msg-role-badge.mentor { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+.msg-role-badge.student { background: rgba(59,130,246,0.2); color: #93c5fd; }
+.msg-time { font-size: 0.68rem; color: #64748b; margin-left: auto; }
+.msg-content { font-size: 0.88rem; color: #cbd5e1; word-break: break-word; }
+
+.msg-del-btn { background: none; border: none; color: #ef4444; opacity: 0; cursor: pointer; padding: 4px; border-radius: 6px; transition: opacity 0.15s, background 0.15s; flex-shrink: 0; }
+.msg-del-btn:hover { background: rgba(239,68,68,0.12); }
 
 /* Form */
 .admin-form-wrap { max-width: 680px; }
@@ -477,12 +795,7 @@ export default {
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .admin-field { display: flex; flex-direction: column; gap: 0.4rem; }
 .admin-field label { font-size: 0.85rem; color: #94a3b8; }
-.admin-field input, .admin-field select, .admin-field textarea {
-  background: rgba(15,15,30,0.8); border: 1px solid rgba(79,70,229,0.2);
-  border-radius: 10px; padding: 0.75rem 1rem;
-  color: #f1f5f9; font-size: 0.9rem; outline: none;
-  transition: border-color 0.2s;
-}
+.admin-field input, .admin-field select, .admin-field textarea { background: rgba(15,15,30,0.8); border: 1px solid rgba(79,70,229,0.2); border-radius: 10px; padding: 0.75rem 1rem; color: #f1f5f9; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
 .admin-field input:focus, .admin-field select:focus, .admin-field textarea:focus { border-color: #4f46e5; }
 .admin-field select option { background: #0f0f1e; }
 .admin-field textarea { resize: vertical; }
@@ -491,11 +804,7 @@ export default {
 .upload-tab { flex: 1; padding: 0.65rem; border: 1px solid rgba(79,70,229,0.2); background: transparent; color: #64748b; border-radius: 10px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
 .upload-tab.active { background: rgba(79,70,229,0.15); border-color: #4f46e5; color: #818cf8; }
 
-.file-drop-zone {
-  border: 2px dashed rgba(79,70,229,0.3); border-radius: 12px;
-  padding: 2rem; text-align: center; cursor: pointer;
-  transition: all 0.2s; color: #64748b;
-}
+.file-drop-zone { border: 2px dashed rgba(79,70,229,0.3); border-radius: 12px; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.2s; color: #64748b; }
 .file-drop-zone:hover { border-color: #4f46e5; background: rgba(79,70,229,0.05); }
 .selected-file { color: #e2e8f0; }
 
@@ -503,12 +812,7 @@ export default {
 .upload-progress-bar { height: 100%; background: linear-gradient(90deg,#4f46e5,#a855f7); border-radius: 6px; transition: width 0.3s; }
 .upload-progress span { position: absolute; right: 0; top: -20px; font-size: 0.75rem; color: #818cf8; }
 
-.admin-submit-btn {
-  padding: 0.9rem 2rem; background: linear-gradient(135deg,#4f46e5,#7c3aed);
-  border: none; border-radius: 10px; color: #fff;
-  font-weight: 700; cursor: pointer; font-size: 0.95rem;
-  transition: opacity 0.2s; align-self: flex-start;
-}
+.admin-submit-btn { padding: 0.9rem 2rem; background: linear-gradient(135deg,#4f46e5,#7c3aed); border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer; font-size: 0.95rem; transition: opacity 0.2s; align-self: flex-start; }
 .admin-submit-btn:hover:not(:disabled) { opacity: 0.9; }
 .admin-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
