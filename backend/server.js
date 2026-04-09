@@ -72,6 +72,14 @@ io.on('connection', (socket) => {
     io.to(roomId).emit('message_deleted', messageId);
   });
 
+  socket.on('bulk_delete_messages', ({ ids, roomId }) => {
+    io.to(roomId).emit('messages_bulk_deleted', ids);
+  });
+
+  socket.on('edit_message', ({ message, roomId }) => {
+    io.to(roomId).emit('message_edited', message);
+  });
+
   socket.on('disconnect', () => {});
 });
 
