@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getUsers, toggleBlockUser, deleteUser, assignMentor, getPayments, refundPayment, getStats } from '../controllers/admin.controller.js';
+import { getUsers, toggleBlockUser, deleteUser, assignMentor, changeRole, getPayments, refundPayment, getStats } from '../controllers/admin.controller.js';
 import authMiddleware from '../middleware/auth.middleware.js';
 import roleMiddleware from '../middleware/role.middleware.js';
 
@@ -12,6 +12,7 @@ router.get('/users', getUsers);
 router.put('/users/:id/block', toggleBlockUser);
 router.delete('/users/:id', deleteUser);
 router.put('/users/:id/mentor', assignMentor);
+router.put('/users/:id/role', changeRole);
 router.get('/payments', getPayments);
 router.put('/payments/:id/refund', refundPayment);
 

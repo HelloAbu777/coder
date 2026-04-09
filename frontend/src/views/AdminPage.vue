@@ -70,13 +70,15 @@
                 </td>
                 <td>
                   <div class="action-btns">
-                    <button class="action-btn warn" @click="toggleBlock(u)">
+                    <button class="action-btn warn" @click="toggleBlock(u)" :title="u.isBlocked ? 'Blokdan chiqarish' : 'Bloklash'">
                       <i :class="u.isBlocked ? 'bi bi-unlock' : 'bi bi-lock'"></i>
                     </button>
-                    <button v-if="u.role === 'student'" class="action-btn info" @click="makeMentor(u._id)" title="Mentor qilish">
-                      <i class="bi bi-person-workspace"></i>
-                    </button>
-                    <button class="action-btn danger" @click="deleteUser(u._id)">
+                    <select class="role-select" :value="u.role" @change="changeUserRole(u, $event.target.value)" title="Rol o'zgartirish">
+                      <option value="visitor">visitor</option>
+                      <option value="student">student</option>
+                      <option value="mentor">mentor</option>
+                    </select>
+                    <button class="action-btn danger" @click="deleteUser(u._id)" title="O'chirish">
                       <i class="bi bi-trash"></i>
                     </button>
                   </div>
@@ -284,6 +286,14 @@ export default {
       } catch (_) {}
     };
 
+    const changeUserRole = async (u, role) => {
+      if (u.role === role) return;
+      try {
+        await api.put(`/admin/users/${u._id}/role`, { role });
+        u.role = role;
+      } catch (_) {}
+    };
+
     const deleteUser = async (id) => {
       if (!confirm("Foydalanuvchini o'chirasizmi?")) return;
       try {
@@ -359,7 +369,7 @@ export default {
       activeTab, tabs, users, payments, statsCards, sectionList,
       videoLoading, videoSuccess, videoError, uploadType,
       selectedFile, uploadProgress, fileInput, videoForm,
-      toggleBlock, makeMentor, deleteUser, refund,
+      toggleBlock, makeMentor, changeUserRole, deleteUser, refund,
       onFileChange, onDrop, addVideo, logout
     };
   }
@@ -452,7 +462,9 @@ export default {
 .payment-badge.failed { background: rgba(239,68,68,0.15); color: #fca5a5; }
 .payment-badge.refunded { background: rgba(100,116,139,0.15); color: #94a3b8; }
 
-.action-btns { display: flex; gap: 0.4rem; }
+.action-btns { display: flex; gap: 0.4rem; align-items: center; }
+.role-select { background: rgba(79,70,229,0.12); border: 1px solid rgba(79,70,229,0.25); border-radius: 8px; color: #a5b4fc; font-size: 0.75rem; padding: 3px 6px; cursor: pointer; outline: none; height: 30px; }
+.role-select:focus { border-color: #4f46e5; }
 .action-btn { width: 30px; height: 30px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; transition: opacity 0.2s; }
 .action-btn:hover { opacity: 0.8; }
 .action-btn.warn { background: rgba(245,158,11,0.15); color: #fcd34d; }

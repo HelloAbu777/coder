@@ -47,6 +47,7 @@ const markVideoWatched = async (req, res) => {
     const alreadyWatched = user.completedVideos.some((id) => id.toString() === videoId);
     if (!alreadyWatched) {
       user.completedVideos.push(videoId);
+      user.totalScore += 10;
       const newLevel = user.calculateLevel();
       if (newLevel !== user.level) {
         user.level = newLevel;
@@ -54,7 +55,7 @@ const markVideoWatched = async (req, res) => {
       await user.save();
     }
 
-    res.json({ message: 'Video ko\'rildi deb belgilandi', level: user.level });
+    res.json({ message: 'Video ko\'rildi deb belgilandi', level: user.level, totalScore: user.totalScore });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

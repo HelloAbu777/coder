@@ -46,6 +46,20 @@ const assignMentor = async (req, res) => {
   }
 };
 
+// @returns {Object} — foydalanuvchi rolini o'zgartirish
+const changeRole = async (req, res) => {
+  try {
+    const { role } = req.body;
+    const allowed = ['visitor', 'student', 'mentor'];
+    if (!allowed.includes(role)) return res.status(400).json({ message: 'Noto\'g\'ri rol' });
+    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select('-password');
+    if (!user) return res.status(404).json({ message: 'Foydalanuvchi topilmadi' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // @returns {Array} — barcha to'lovlar
 const getPayments = async (req, res) => {
   try {
@@ -95,4 +109,4 @@ const getStats = async (req, res) => {
   }
 };
 
-export { getUsers, toggleBlockUser, deleteUser, assignMentor, getPayments, refundPayment, getStats };
+export { getUsers, toggleBlockUser, deleteUser, assignMentor, changeRole, getPayments, refundPayment, getStats };

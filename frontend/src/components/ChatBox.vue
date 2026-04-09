@@ -116,6 +116,10 @@ export default {
           scrollBottom();
         }
       });
+
+      socket.on('message_deleted', (messageId) => {
+        messages.value = messages.value.filter((m) => m._id !== messageId);
+      });
     };
 
     const send = async () => {
@@ -136,6 +140,7 @@ export default {
       try {
         await api.delete(`/chat/${id}`);
         messages.value = messages.value.filter((m) => m._id !== id);
+        socket?.emit('delete_message', { messageId: id, roomId: props.roomId });
       } catch (_) {}
     };
 

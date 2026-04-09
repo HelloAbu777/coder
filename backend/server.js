@@ -68,6 +68,10 @@ io.on('connection', (socket) => {
     io.to(data.roomId).emit('receive_message', data);
   });
 
+  socket.on('delete_message', ({ messageId, roomId }) => {
+    io.to(roomId).emit('message_deleted', messageId);
+  });
+
   socket.on('disconnect', () => {});
 });
 
