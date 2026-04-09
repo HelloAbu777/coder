@@ -66,7 +66,11 @@ const login = async (req, res) => {
       token,
       user: {
         _id: user._id, name: user.name, username: user.username,
-        email: user.email, role: user.role, isPaid: user.isPaid, level: user.level
+        email: user.email, role: user.role, isPaid: user.isPaid,
+        level: user.level, totalScore: user.totalScore,
+        completedVideos: user.completedVideos,
+        completedQuizzes: user.completedQuizzes,
+        completedSections: user.completedSections
       }
     });
   } catch (err) {

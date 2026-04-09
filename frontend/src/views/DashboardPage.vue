@@ -53,7 +53,10 @@
             <div v-for="s in sections" :key="s.name" class="section-progress">
               <div class="d-flex justify-content-between mb-1">
                 <span class="small fw-semibold" style="color:var(--text-light)">{{ s.icon }} {{ s.name }}</span>
-                <span class="small" style="color:var(--text-muted)">{{ s.progress }}%</span>
+                <span class="small" style="color:var(--text-muted)">
+                  <span v-if="s.total > 0">{{ s.watched || 0 }}/{{ s.total }} dars · {{ s.progress }}%</span>
+                  <span v-else>Tez kunda</span>
+                </span>
               </div>
               <div class="prog-track">
                 <div class="prog-fill" :style="`width:${s.progress}%`" :class="{ complete: s.progress === 100 }"></div>
@@ -134,22 +137,24 @@ export default {
     const user = computed(() => authStore.user);
     const leaderboard = ref([]);
     const certificates = ref([]);
+    const allVideos = ref([]);
 
-    const sectionMeta = [
-      { name: 'HTML', icon: '🌐', total: 10 },
-      { name: 'CSS', icon: '🎨', total: 12 },
-      { name: 'JavaScript', icon: '⚡', total: 20 },
-      { name: 'Node.js', icon: '🖥️', total: 15 },
-      { name: 'Python', icon: '🐍', total: 18 }
-    ];
+    const sectionIcons = { HTML: '🌐', CSS: '🎨', JavaScript: '⚡', 'Node.js': '🖥️', Python: '🐍' };
 
-    const sections = computed(() =>
-      sectionMeta.map((s) => {
-        const completed = user.value?.completedSections?.includes(s.name);
-        const progress = completed ? 100 : 0;
-        return { ...s, progress };
-      })
-    );
+    // @returns {Array} — bo'limlar progressini haqiqiy videolar asosida hisoblash
+    const sections = computed(() => {
+      const sectionNames = ['HTML', 'CSS', 'JavaScript', 'Node.js', 'Python'];
+      return sectionNames.map((name) => {
+        const sectionVideos = allVideos.value.filter((v) => v.section === name);
+        const total = sectionVideos.length;
+        if (total === 0) return { name, icon: sectionIcons[name], total: 0, progress: 0 };
+        const watched = sectionVideos.filter((v) =>
+          user.value?.completedVideos?.includes(v._id)
+        ).length;
+        const progress = Math.round((watched / total) * 100);
+        return { name, icon: sectionIcons[name], total, watched, progress };
+      });
+    });
 
     const stats = computed(() => [
       { icon: 'bi bi-play-circle-fill', value: user.value?.completedVideos?.length || 0, label: "Ko'rilgan darslar" },
@@ -159,12 +164,14 @@ export default {
 
     onMounted(async () => {
       try {
-        const [lbRes, certRes] = await Promise.all([
+        const [lbRes, certRes, videoRes] = await Promise.all([
           api.get('/profile/leaderboard'),
-          api.get('/certificates')
+          api.get('/certificates'),
+          api.get('/videos')
         ]);
         leaderboard.value = lbRes.data.slice(0, 7);
         certificates.value = certRes.data;
+        allVideos.value = videoRes.data;
       } catch (_) {}
     });
 

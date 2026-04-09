@@ -3,7 +3,8 @@ import {
   getUsers, toggleBlockUser, deleteUser, assignMentor, changeRole,
   getPayments, refundPayment, getStats,
   getFinanceStats,
-  getAdminChatRooms, getAdminChatMessages, clearChatRoom, adminDeleteMessage
+  getAdminChatRooms, getAdminChatMessages, clearChatRoom, adminDeleteMessage,
+  getAdminQuizzes
 } from '../controllers/admin.controller.js';
 import authMiddleware from '../middleware/auth.middleware.js';
 import roleMiddleware from '../middleware/role.middleware.js';
@@ -28,5 +29,8 @@ router.get('/chat/rooms', getAdminChatRooms);
 router.get('/chat/:roomId/messages', getAdminChatMessages);
 router.delete('/chat/:roomId/clear', clearChatRoom);
 router.delete('/chat/message/:id', adminDeleteMessage);
+
+// Testlar
+router.get('/quizzes', getAdminQuizzes);
 
 export default router;

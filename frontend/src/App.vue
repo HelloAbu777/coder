@@ -20,6 +20,8 @@ export default {
     const route = useRoute();
     const authStore = useAuthStore();
     authStore.init();
+    // Har safar sahifa ochilganda yangi ma'lumot olish
+    if (authStore.token) authStore.fetchMe();
 
     const showNav = computed(() => !['/', '/login', '/register', '/payment', '/admin', '/admin/login', '/mentor'].includes(route.path));
 

@@ -52,6 +52,7 @@
           <VideoPlayer
             :url="selectedVideo.url"
             :video-id="selectedVideo._id"
+            :duration="selectedVideo.duration"
             @watched="onWatched"
           />
           <div class="card-dark p-4 mt-3">
@@ -67,11 +68,42 @@
         </div>
       </div>
     </div>
+
+    <!-- ===== QUIZ UNLOCK MODAL ===== -->
+    <transition name="modal-fade">
+      <div v-if="showQuizModal" class="quiz-unlock-overlay" @click.self="showQuizModal = false">
+        <div class="quiz-unlock-card">
+          <div class="qum-icon">
+            <i class="bi bi-unlock-fill"></i>
+          </div>
+          <h4 class="qum-title">Test ochildi!</h4>
+          <p class="qum-desc">
+            Videoni ko'rib bo'ldingiz.<br>
+            Endi testni yechib ball to'plang.
+          </p>
+          <div class="qum-rules">
+            <div class="qum-rule"><i class="bi bi-circle-fill me-2" style="color:#4f46e5;font-size:0.5rem"></i>0 xato — 10 ball</div>
+            <div class="qum-rule"><i class="bi bi-circle-fill me-2" style="color:#4f46e5;font-size:0.5rem"></i>1 xato — 9 ball</div>
+            <div class="qum-rule"><i class="bi bi-circle-fill me-2" style="color:#4f46e5;font-size:0.5rem"></i>2 xato — 8 ball</div>
+            <div class="qum-rule" style="color:#ef4444"><i class="bi bi-circle-fill me-2" style="color:#ef4444;font-size:0.5rem"></i>3+ xato — 0 ball</div>
+          </div>
+          <div class="qum-actions">
+            <button class="btn-start-quiz" @click="goToQuiz">
+              <i class="bi bi-play-fill me-2"></i>Testni boshlash
+            </button>
+            <button class="btn-later" @click="showQuizModal = false">
+              Keyinroq
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import VideoPlayer from '../components/VideoPlayer.vue';
 import { useAuthStore } from '../store/auth.js';
 import api from '../utils/axios.js';
@@ -81,10 +113,13 @@ export default {
   components: { VideoPlayer },
   setup() {
     const authStore = useAuthStore();
+    const router = useRouter();
     const videos = ref([]);
     const selectedVideo = ref(null);
     const activeSection = ref('HTML');
     const sectionList = ['HTML', 'CSS', 'JavaScript', 'Node.js', 'Python'];
+    const showQuizModal = ref(false);
+    const quizVideoId = ref(null);
 
     const filteredVideos = computed(() =>
       videos.value.filter((v) => v.section === activeSection.value)
@@ -103,11 +138,20 @@ export default {
       selectedVideo.value = video;
     };
 
+    // @returns {void} — video ko'rilgandan so'ng test modali ochiladi
     const onWatched = async (videoId) => {
       try {
         await api.post('/videos/watched', { videoId });
         await authStore.fetchMe();
+        quizVideoId.value = videoId;
+        showQuizModal.value = true;
       } catch (_) {}
+    };
+
+    // @returns {void} — test sahifasiga o'tish
+    const goToQuiz = () => {
+      showQuizModal.value = false;
+      router.push(`/quiz?videoId=${quizVideoId.value}`);
     };
 
     const formatDuration = (sec) => {
@@ -124,7 +168,120 @@ export default {
       } catch (_) {}
     });
 
-    return { videos, selectedVideo, activeSection, sectionList, filteredVideos, isWatched, isLocked, selectVideo, onWatched, formatDuration };
+    return { videos, selectedVideo, activeSection, sectionList, filteredVideos, isWatched, isLocked, selectVideo, onWatched, formatDuration, showQuizModal, goToQuiz };
   }
 };
 </script>
+
+<style scoped>
+/* ===== QUIZ UNLOCK MODAL ===== */
+.quiz-unlock-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  padding: 1rem;
+}
+
+.quiz-unlock-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(79, 70, 229, 0.3);
+  border-radius: 24px;
+  padding: 2.5rem 2rem;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 0 60px rgba(79, 70, 229, 0.25);
+}
+
+.qum-icon {
+  width: 72px;
+  height: 72px;
+  background: rgba(79, 70, 229, 0.15);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: #818cf8;
+  margin: 0 auto 1.25rem;
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.3); }
+  50% { box-shadow: 0 0 0 12px rgba(79, 70, 229, 0); }
+}
+
+.qum-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  margin-bottom: 0.6rem;
+}
+
+.qum-desc {
+  color: #94a3b8;
+  font-size: 0.92rem;
+  margin-bottom: 1.25rem;
+  line-height: 1.6;
+}
+
+.qum-rules {
+  background: rgba(15, 15, 30, 0.5);
+  border: 1px solid rgba(79, 70, 229, 0.1);
+  border-radius: 12px;
+  padding: 0.85rem 1.1rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.qum-rule {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  padding: 0.25rem 0;
+  display: flex;
+  align-items: center;
+}
+
+.qum-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.btn-start-quiz {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  padding: 0.8rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-start-quiz:hover { opacity: 0.9; transform: translateY(-1px); }
+
+.btn-later {
+  background: transparent;
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  border-radius: 12px;
+  color: #64748b;
+  padding: 0.65rem;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.btn-later:hover { border-color: rgba(79, 70, 229, 0.4); color: #94a3b8; }
+
+/* Transition */
+.modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.25s ease; }
+.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
+</style>

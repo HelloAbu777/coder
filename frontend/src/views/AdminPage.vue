@@ -309,6 +309,127 @@
         </div>
       </section>
 
+      <!-- ======================== TESTLAR ======================== -->
+      <section v-if="activeTab === 'quizzes'" class="admin-section">
+        <div class="admin-section-header">
+          <h3>Testlar boshqaruvi</h3>
+          <span class="badge-count">{{ quizzes.length }} ta</span>
+          <button class="btn-add-quiz ms-auto" @click="showQuizForm = !showQuizForm">
+            <i class="bi bi-plus-circle me-2"></i>Yangi test
+          </button>
+        </div>
+
+        <!-- Yangi test formasi -->
+        <div v-if="showQuizForm" class="quiz-form-wrap">
+          <div v-if="quizSuccess" class="admin-alert success mb-3">
+            <i class="bi bi-check-circle me-2"></i>Test muvaffaqiyatli saqlandi!
+          </div>
+          <div v-if="quizError" class="admin-alert danger mb-3">
+            <i class="bi bi-exclamation-circle me-2"></i>{{ quizError }}
+          </div>
+
+          <div class="form-row mb-3">
+            <div class="admin-field">
+              <label>Test sarlavhasi</label>
+              <input v-model="quizForm.title" type="text" placeholder="Masalan: HTML Kirish testi" required />
+            </div>
+            <div class="admin-field">
+              <label>Bo'lim</label>
+              <select v-model="quizForm.section">
+                <option v-for="s in sectionList" :key="s" :value="s">{{ s }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="admin-field mb-4">
+            <label>Video (ixtiyoriy — bog'lash uchun)</label>
+            <select v-model="quizForm.video">
+              <option value="">— Videosiz (mustaqil test) —</option>
+              <option v-for="v in allVideosForQuiz.filter(v => v.section === quizForm.section)" :key="v._id" :value="v._id">
+                {{ v.order }}. {{ v.title }}
+              </option>
+            </select>
+            <span class="field-hint">Video tanlansa, o'quvchi videoni ko'rgandan so'ng test ochiladi</span>
+          </div>
+
+          <!-- Savollar -->
+          <div class="questions-list">
+            <div v-for="(q, qi) in quizForm.questions" :key="qi" class="question-edit-card">
+              <div class="qe-header">
+                <span class="qe-num">Savol {{ qi + 1 }}</span>
+                <button v-if="quizForm.questions.length > 1" class="qe-remove" @click="removeQuestion(qi)">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+              <input v-model="q.question" type="text" placeholder="Savol matni..." class="qe-input mb-2" />
+              <div class="qe-options">
+                <div v-for="(opt, oi) in q.options" :key="oi" class="qe-option-row">
+                  <input
+                    type="radio"
+                    :name="`correct-${qi}`"
+                    :value="oi"
+                    v-model="q.correctIndex"
+                    class="qe-radio"
+                    :title="'To\'g\'ri javob'"
+                  />
+                  <input v-model="q.options[oi]" type="text" :placeholder="`Variant ${String.fromCharCode(65+oi)}`" class="qe-opt-input" />
+                </div>
+              </div>
+              <p class="qe-hint">Radio tugmasini bosing — to'g'ri javob belgilanadi</p>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn-add-q" @click="addQuestion">
+              <i class="bi bi-plus me-2"></i>Savol qo'shish
+            </button>
+            <button class="admin-submit-btn" @click="saveQuiz" style="flex:1">
+              <i class="bi bi-floppy me-2"></i>Saqlash
+            </button>
+          </div>
+        </div>
+
+        <!-- Mavjud testlar ro'yxati -->
+        <div v-if="quizLoading" class="text-center py-4" style="color:#64748b">
+          <div class="spinner-border spinner-border-sm"></div>
+        </div>
+        <div v-else-if="quizzes.length === 0 && !showQuizForm" class="text-center py-5" style="color:#64748b">
+          <i class="bi bi-patch-question fs-2 d-block mb-2"></i>
+          <p>Hali test yo'q. "Yangi test" tugmasini bosing</p>
+        </div>
+        <div v-else class="admin-table-wrap mt-3">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Sarlavha</th>
+                <th>Bo'lim</th>
+                <th>Savollar</th>
+                <th>Video</th>
+                <th>Amal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="q in quizzes" :key="q._id">
+                <td style="color:#f1f5f9;font-weight:600">{{ q.title }}</td>
+                <td><span class="role-badge student">{{ q.section }}</span></td>
+                <td>{{ q.questions?.length || 0 }} ta</td>
+                <td>
+                  <span v-if="q.video" style="color:#10b981;font-size:0.82rem">
+                    <i class="bi bi-link-45deg"></i> Bog'langan
+                  </span>
+                  <span v-else style="color:#64748b;font-size:0.82rem">—</span>
+                </td>
+                <td>
+                  <button class="action-btn danger" @click="deleteQuiz(q._id)" title="O'chirish">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <!-- ======================== VIDEO QO'SHISH ======================== -->
       <section v-if="activeTab === 'videos'" class="admin-section">
         <div class="admin-section-header">
@@ -415,7 +536,8 @@ export default {
       { key: 'payments', label: "To'lovlar", icon: 'bi bi-credit-card' },
       { key: 'finance', label: 'Moliya', icon: 'bi bi-graph-up' },
       { key: 'chat', label: 'Chat', icon: 'bi bi-chat-dots' },
-      { key: 'videos', label: 'Video', icon: 'bi bi-play-circle' }
+      { key: 'videos', label: 'Video', icon: 'bi bi-play-circle' },
+      { key: 'quizzes', label: 'Testlar', icon: 'bi bi-patch-question' }
     ];
 
     // Users & payments
@@ -435,6 +557,72 @@ export default {
     const chatMessages = ref([]);
     const selectedRoom = ref(null);
     const msgListEl = ref(null);
+
+    // Quiz
+    const quizzes = ref([]);
+    const allVideosForQuiz = ref([]);
+    const quizLoading = ref(false);
+    const quizSuccess = ref(false);
+    const quizError = ref('');
+    const showQuizForm = ref(false);
+    const quizForm = reactive({
+      title: '', section: 'HTML', video: '',
+      questions: [{ question: '', options: ['', '', '', ''], correctIndex: 0 }]
+    });
+
+    const addQuestion = () => {
+      quizForm.questions.push({ question: '', options: ['', '', '', ''], correctIndex: 0 });
+    };
+    const removeQuestion = (i) => {
+      if (quizForm.questions.length > 1) quizForm.questions.splice(i, 1);
+    };
+
+    const loadQuizzes = async () => {
+      quizLoading.value = true;
+      try {
+        const [qRes, vRes] = await Promise.all([
+          api.get('/admin/quizzes'),
+          api.get('/videos')
+        ]);
+        quizzes.value = qRes.data;
+        allVideosForQuiz.value = vRes.data;
+      } catch (_) {} finally {
+        quizLoading.value = false;
+      }
+    };
+
+    const saveQuiz = async () => {
+      quizError.value = '';
+      quizSuccess.value = false;
+      // Validation
+      for (const q of quizForm.questions) {
+        if (!q.question.trim()) { quizError.value = 'Barcha savollarni to\'ldiring'; return; }
+        if (q.options.some((o) => !o.trim())) { quizError.value = 'Barcha variantlarni to\'ldiring'; return; }
+      }
+      try {
+        const payload = {
+          title: quizForm.title,
+          section: quizForm.section,
+          video: quizForm.video || undefined,
+          questions: quizForm.questions
+        };
+        await api.post('/quiz', payload);
+        quizSuccess.value = true;
+        showQuizForm.value = false;
+        Object.assign(quizForm, { title: '', section: 'HTML', video: '', questions: [{ question: '', options: ['', '', '', ''], correctIndex: 0 }] });
+        await loadQuizzes();
+      } catch (err) {
+        quizError.value = err.response?.data?.message || 'Xato yuz berdi';
+      }
+    };
+
+    const deleteQuiz = async (id) => {
+      if (!confirm('Testni o\'chirasizmi?')) return;
+      try {
+        await api.delete(`/quiz/${id}`);
+        quizzes.value = quizzes.value.filter((q) => q._id !== id);
+      } catch (_) {}
+    };
 
     // Video
     const sectionList = ['HTML', 'CSS', 'JavaScript', 'Node.js', 'Python'];
@@ -625,6 +813,7 @@ export default {
       activeTab.value = key;
       if (key === 'finance' && !finance.value.totalRevenue) loadFinance();
       if (key === 'chat' && chatRooms.value.length === 0) loadChatRooms();
+      if (key === 'quizzes' && quizzes.value.length === 0) loadQuizzes();
     };
 
     onMounted(loadData);
@@ -635,6 +824,8 @@ export default {
       chatRooms, chatMessages, selectedRoom, msgListEl,
       sectionList, videoLoading, videoSuccess, videoError,
       uploadType, selectedFile, uploadProgress, fileInput, videoForm,
+      quizzes, allVideosForQuiz, quizLoading, quizSuccess, quizError,
+      showQuizForm, quizForm, addQuestion, removeQuestion, saveQuiz, deleteQuiz,
       formatMoney, formatMoneyShort, formatRoomName, formatMsgTime,
       loadFinance, loadChatRooms, selectChatRoom, clearRoom, deleteAdminMsg,
       toggleBlock, makeMentor, changeUserRole, deleteUser, refund,
@@ -819,4 +1010,86 @@ export default {
 .admin-alert { padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.9rem; margin-bottom: 1rem; }
 .admin-alert.success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: #6ee7b7; }
 .admin-alert.danger { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #fca5a5; }
+/* ===== QUIZ MANAGEMENT ===== */
+.btn-add-quiz {
+  background: rgba(79,70,229,0.15);
+  border: 1px solid rgba(79,70,229,0.3);
+  border-radius: 10px;
+  color: #818cf8;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background 0.2s;
+}
+.btn-add-quiz:hover { background: rgba(79,70,229,0.25); }
+
+.quiz-form-wrap {
+  background: rgba(15,15,30,0.6);
+  border: 1px solid rgba(79,70,229,0.15);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.field-hint { font-size: 0.75rem; color: #64748b; margin-top: 0.3rem; display: block; }
+
+.questions-list { display: flex; flex-direction: column; gap: 1rem; }
+
+.question-edit-card {
+  background: rgba(79,70,229,0.05);
+  border: 1px solid rgba(79,70,229,0.12);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+}
+
+.qe-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
+.qe-num { font-size: 0.78rem; font-weight: 700; color: #818cf8; text-transform: uppercase; }
+.qe-remove { background: rgba(239,68,68,0.1); border: none; border-radius: 6px; color: #fca5a5; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; }
+.qe-remove:hover { background: rgba(239,68,68,0.2); }
+
+.qe-input {
+  width: 100%;
+  background: rgba(15,15,30,0.6);
+  border: 1px solid rgba(79,70,229,0.2);
+  border-radius: 8px;
+  color: #f1f5f9;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  outline: none;
+}
+.qe-input:focus { border-color: #4f46e5; }
+
+.qe-options { display: flex; flex-direction: column; gap: 0.4rem; }
+.qe-option-row { display: flex; align-items: center; gap: 0.6rem; }
+.qe-radio { width: 16px; height: 16px; accent-color: #4f46e5; flex-shrink: 0; cursor: pointer; }
+.qe-opt-input {
+  flex: 1;
+  background: rgba(15,15,30,0.5);
+  border: 1px solid rgba(79,70,229,0.15);
+  border-radius: 6px;
+  color: #cbd5e1;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.85rem;
+  outline: none;
+}
+.qe-opt-input:focus { border-color: #4f46e5; }
+.qe-hint { font-size: 0.7rem; color: #475569; margin: 0.4rem 0 0; }
+
+.btn-add-q {
+  background: rgba(16,185,129,0.1);
+  border: 1px solid rgba(16,185,129,0.2);
+  border-radius: 10px;
+  color: #6ee7b7;
+  padding: 0.55rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background 0.2s;
+}
+.btn-add-q:hover { background: rgba(16,185,129,0.18); }
 </style>

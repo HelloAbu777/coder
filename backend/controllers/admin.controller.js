@@ -199,4 +199,15 @@ const adminDeleteMessage = async (req, res) => {
   }
 };
 
-export { getUsers, toggleBlockUser, deleteUser, assignMentor, changeRole, getPayments, refundPayment, getStats, getFinanceStats, getAdminChatRooms, getAdminChatMessages, clearChatRoom, adminDeleteMessage };
+// @returns {Array} — admin: barcha testlar ro'yxati
+const getAdminQuizzes = async (req, res) => {
+  try {
+    const { Quiz } = await import('../models/quiz.model.js');
+    const quizzes = await Quiz.find().select('title section questions video isCheckpoint').sort({ section: 1, createdAt: -1 });
+    res.json(quizzes);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export { getUsers, toggleBlockUser, deleteUser, assignMentor, changeRole, getPayments, refundPayment, getStats, getFinanceStats, getAdminChatRooms, getAdminChatMessages, clearChatRoom, adminDeleteMessage, getAdminQuizzes };
