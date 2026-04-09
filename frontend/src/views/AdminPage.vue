@@ -12,10 +12,10 @@
           <span>{{ t.label }}</span>
         </button>
       </nav>
-      <RouterLink to="/dashboard" class="admin-nav-item mt-auto">
-        <i class="bi bi-arrow-left"></i>
-        <span>Saytga qaytish</span>
-      </RouterLink>
+      <button class="admin-nav-item mt-auto" @click="logout">
+        <i class="bi bi-box-arrow-left"></i>
+        <span>Chiqish</span>
+      </button>
     </aside>
 
     <!-- Asosiy kontent -->
@@ -219,11 +219,13 @@
 
 <script>
 import { ref, reactive, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import api from '../utils/axios.js';
 
 export default {
   name: 'AdminPage',
   setup() {
+    const router = useRouter();
     const activeTab = ref('users');
     const tabs = [
       { key: 'users', label: 'Foydalanuvchilar', icon: 'bi bi-people' },
@@ -345,6 +347,12 @@ export default {
       }
     };
 
+    const logout = () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      router.push('/admin/login');
+    };
+
     onMounted(loadData);
 
     return {
@@ -352,7 +360,7 @@ export default {
       videoLoading, videoSuccess, videoError, uploadType,
       selectedFile, uploadProgress, fileInput, videoForm,
       toggleBlock, makeMentor, deleteUser, refund,
-      onFileChange, onDrop, addVideo
+      onFileChange, onDrop, addVideo, logout
     };
   }
 };

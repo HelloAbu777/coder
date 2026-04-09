@@ -21,7 +21,7 @@ export default {
     const authStore = useAuthStore();
     authStore.init();
 
-    const showNav = computed(() => !['/', '/login', '/register', '/payment', '/admin', '/mentor'].includes(route.path));
+    const showNav = computed(() => !['/', '/login', '/register', '/payment', '/admin', '/admin/login', '/mentor'].includes(route.path));
 
     return { showNav };
   }
