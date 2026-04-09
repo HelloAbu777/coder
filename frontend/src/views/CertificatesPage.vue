@@ -3,63 +3,52 @@
     <h2 class="section-title mb-5">Sertifikatlar</h2>
 
     <!-- Bo'limlar holati -->
-    <div class="row g-4 mb-5">
-      <div v-for="s in sectionStatus" :key="s.name" class="col-md-4 col-lg-2-4">
-        <div class="card-dark p-4 text-center h-100">
-          <div class="fs-1 mb-3">{{ s.icon }}</div>
-          <h6 class="fw-semibold mb-2" style="color:var(--text-light)">{{ s.name }}</h6>
-          <div v-if="s.hasCert">
-            <span class="badge px-3 py-2 mb-3 d-block" style="background:rgba(16,185,129,0.2);color:#6ee7b7">
-              <i class="bi bi-check-circle me-1"></i>Sertifikat bor
-            </span>
-            <a v-if="s.pdfUrl" :href="s.pdfUrl" target="_blank" class="btn btn-sm btn-outline-primary w-100">
-              <i class="bi bi-download me-1"></i>Yuklab olish
-            </a>
+    <div class="row g-3 mb-5">
+      <div v-for="s in sections" :key="s.name" class="col-md-4 col-lg-2-4">
+        <div class="section-card" :class="{ done: s.completed }">
+          <div class="section-icon">{{ s.icon }}</div>
+          <div class="section-name">{{ s.name }}</div>
+          <div v-if="s.completed" class="section-status done-text">
+            <i class="bi bi-check-circle-fill me-1"></i>Tugallangan
           </div>
-          <div v-else-if="s.canGenerate">
-            <button class="btn btn-sm btn-primary w-100" :disabled="generating === s.name" @click="generate(s.name)">
-              <span v-if="generating === s.name" class="spinner-border spinner-border-sm me-1"></span>
-              Sertifikat olish
-            </button>
-          </div>
-          <div v-else>
-            <span class="badge px-3 py-2 d-block" style="background:rgba(148,163,184,0.1);color:var(--text-muted)">
-              <i class="bi bi-lock me-1"></i>Checkpoint kerak
-            </span>
-            <div class="small mt-2" style="color:var(--text-muted)">85+ ball bilan checkpoint o'ting</div>
-          </div>
+          <div v-else class="section-status pending-text">Davom etmoqda</div>
+          <button v-if="s.completed && !s.hasCert" class="btn btn-primary btn-sm mt-2 w-100" :disabled="generating === s.name" @click="getCertificate(s.name)">
+            <span v-if="generating === s.name" class="spinner-border spinner-border-sm me-1"></span>
+            Sertifikat olish
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Sertifikatlar ro'yxati -->
-    <div v-if="certificates.length > 0">
-      <h4 class="fw-semibold mb-4" style="color:var(--text-light)">Mening sertifikatlarim</h4>
-      <div class="row g-4">
-        <div v-for="cert in certificates" :key="cert._id" class="col-md-6">
-          <div class="card-dark p-4 d-flex align-items-center gap-4">
-            <i class="bi bi-award-fill flex-shrink-0" style="font-size:3rem;color:var(--primary)"></i>
-            <div class="flex-grow-1">
-              <h5 class="fw-bold mb-1" style="color:var(--text-light)">{{ cert.section }}</h5>
-              <p class="small mb-1" style="color:var(--text-muted)">
-                {{ new Date(cert.issuedAt).toLocaleDateString('uz-UZ') }}
-              </p>
-              <p class="small mb-2" style="color:var(--text-muted);font-family:monospace">
-                ID: {{ cert.uniqueId?.slice(0, 12) }}...
-              </p>
-              <a v-if="cert.pdfUrl" :href="cert.pdfUrl" target="_blank" class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-download me-1"></i>PDF
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
+    <!-- Sertifikatlar -->
+    <h4 class="fw-semibold mb-4" style="color:var(--text-light)">
+      <i class="bi bi-award me-2" style="color:var(--primary)"></i>
+      Mening sertifikatlarim
+    </h4>
+
+    <div v-if="certificates.length === 0" class="text-center py-5 card-dark">
+      <i class="bi bi-award fs-1 d-block mb-3" style="color:var(--text-muted)"></i>
+      <p style="color:var(--text-muted)">Hali sertifikat yo'q. Bo'limni tugating!</p>
     </div>
 
-    <div v-else-if="!loading" class="text-center py-5" style="color:var(--text-muted)">
-      <i class="bi bi-award fs-1 d-block mb-3"></i>
-      <p>Hali sertifikat yo'q. Bo'limlarni tugatib checkpoint testni o'ting!</p>
-      <RouterLink to="/videos" class="btn btn-primary">Darslarga o'tish</RouterLink>
+    <div class="row g-4">
+      <div v-for="cert in certificates" :key="cert._id" class="col-md-6 col-lg-4">
+        <div class="cert-card">
+          <div class="cert-header">
+            <i class="bi bi-award-fill cert-icon"></i>
+            <span class="cert-badge">CODERS</span>
+          </div>
+          <div class="cert-section">{{ cert.section }}</div>
+          <div class="cert-label">Bo'limi sertifikati</div>
+          <div class="cert-info">
+            <span><i class="bi bi-calendar3 me-1"></i>{{ new Date(cert.issuedAt).toLocaleDateString('uz-UZ') }}</span>
+            <span><i class="bi bi-hash me-1"></i>{{ cert.uniqueId?.slice(0, 8) }}...</span>
+          </div>
+          <a v-if="cert.pdfUrl" :href="cert.pdfUrl" target="_blank" class="btn btn-primary btn-sm w-100 mt-3">
+            <i class="bi bi-download me-2"></i>PDF yuklab olish
+          </a>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -74,10 +63,9 @@ export default {
   setup() {
     const authStore = useAuthStore();
     const certificates = ref([]);
-    const loading = ref(true);
     const generating = ref('');
 
-    const sections = [
+    const sectionMeta = [
       { name: 'HTML', icon: '🌐' },
       { name: 'CSS', icon: '🎨' },
       { name: 'JavaScript', icon: '⚡' },
@@ -85,28 +73,21 @@ export default {
       { name: 'Python', icon: '🐍' }
     ];
 
-    const sectionStatus = computed(() =>
-      sections.map((s) => {
-        const cert = certificates.value.find((c) => c.section === s.name);
-        const completed = authStore.user?.completedSections?.includes(s.name);
-        return {
-          ...s,
-          hasCert: !!cert,
-          pdfUrl: cert?.pdfUrl || '',
-          canGenerate: completed && !cert
-        };
-      })
+    const sections = computed(() =>
+      sectionMeta.map((s) => ({
+        ...s,
+        completed: authStore.user?.completedSections?.includes(s.name),
+        hasCert: certificates.value.some((c) => c.section === s.name)
+      }))
     );
 
-    const generate = async (section) => {
+    const getCertificate = async (section) => {
       generating.value = section;
       try {
         const { data } = await api.post('/certificates/generate', { section });
         certificates.value.push(data);
         await authStore.fetchMe();
-      } catch (err) {
-        alert(err.response?.data?.message || 'Xato yuz berdi');
-      } finally {
+      } catch (_) {} finally {
         generating.value = '';
       }
     };
@@ -115,12 +96,38 @@ export default {
       try {
         const { data } = await api.get('/certificates');
         certificates.value = data;
-      } catch (_) {} finally {
-        loading.value = false;
-      }
+      } catch (_) {}
     });
 
-    return { certificates, loading, generating, sectionStatus, generate };
+    return { certificates, sections, generating, getCertificate };
   }
 };
 </script>
+
+<style scoped>
+.section-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 1.2rem; text-align: center;
+  transition: all 0.2s;
+}
+.section-card.done { border-color: rgba(16,185,129,0.3); }
+.section-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+.section-name { font-weight: 700; color: var(--text-light); margin-bottom: 0.4rem; }
+.section-status { font-size: 0.8rem; }
+.done-text { color: #10b981; }
+.pending-text { color: var(--text-muted); }
+
+.cert-card {
+  background: linear-gradient(135deg, #0f0f1e, #1a1a2e);
+  border: 1px solid rgba(79,70,229,0.3);
+  border-radius: 16px; padding: 1.5rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.cert-card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(79,70,229,0.2); }
+.cert-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.cert-icon { font-size: 2rem; color: #818cf8; }
+.cert-badge { background: rgba(79,70,229,0.2); color: #a5b4fc; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+.cert-section { font-size: 1.4rem; font-weight: 800; color: #f1f5f9; margin-bottom: 0.2rem; }
+.cert-label { font-size: 0.8rem; color: #64748b; margin-bottom: 1rem; }
+.cert-info { display: flex; justify-content: space-between; font-size: 0.78rem; color: #64748b; }
+</style>
