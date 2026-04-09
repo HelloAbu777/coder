@@ -114,4 +114,36 @@ const deleteVideo = async (req, res) => {
   }
 };
 
-export { getVideos, getVideo, markVideoWatched, createVideo, updateVideo, deleteVideo };
+// @returns {Object} — admin: kompyuterdan video yuklash
+const uploadVideo = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'Fayl yuklanmadi' });
+
+    const videoUrl = `/uploads/videos/${req.file.filename}`;
+    const video = await Video.create({
+      title: req.body.title,
+      section: req.body.section,
+      order: Number(req.body.order),
+      description: req.body.description || '',
+      duration: Number(req.body.duration) || 0,
+      url: videoUrl,
+      isPublished: true
+    });
+
+    const students = await User.find({ role: 'student' });
+    const notifications = students.map((s) => ({
+      user: s._id,
+      type: 'new_video',
+      title: "Yangi dars qo'shildi",
+      message: video.title,
+      link: '/videos'
+    }));
+    await Notification.insertMany(notifications);
+
+    res.status(201).json(video);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export { getVideos, getVideo, markVideoWatched, createVideo, updateVideo, deleteVideo, uploadVideo };
