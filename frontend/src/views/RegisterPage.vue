@@ -40,6 +40,24 @@
             </div>
           </div>
           <div class="auth-field">
+            <label>Username <span class="username-hint">— boshqalar siz bilan chat ochish uchun ishlatadi</span></label>
+            <div class="auth-input-wrap" :class="{ 'input-error': usernameError, 'input-ok': usernameOk }">
+              <i class="bi bi-at"></i>
+              <input
+                v-model="form.username"
+                type="text"
+                placeholder="masalan: ali_karimov"
+                @input="onUsernameInput"
+                required
+              />
+              <span v-if="checkingUsername" class="check-spinner spinner-border spinner-border-sm"></span>
+              <i v-else-if="usernameOk" class="bi bi-check-circle-fill check-ok"></i>
+              <i v-else-if="usernameError" class="bi bi-x-circle-fill check-err"></i>
+            </div>
+            <div v-if="usernameError" class="field-error">{{ usernameError }}</div>
+            <div v-else-if="usernameOk" class="field-ok">Ishlatish mumkin!</div>
+          </div>
+          <div class="auth-field">
             <label>Email</label>
             <div class="auth-input-wrap">
               <i class="bi bi-envelope"></i>
@@ -76,29 +94,62 @@
 import { reactive, ref } from 'vue';
 import { useAuthStore } from '../store/auth.js';
 import { useRouter } from 'vue-router';
+import api from '../utils/axios.js';
 
 export default {
   name: 'RegisterPage',
   setup() {
     const authStore = useAuthStore();
     const router = useRouter();
-    const form = reactive({ name: '', email: '', password: '' });
+    const form = reactive({ name: '', username: '', email: '', password: '' });
     const error = ref('');
     const showPass = ref(false);
+    const usernameError = ref('');
+    const usernameOk = ref(false);
+    const checkingUsername = ref(false);
+    let debounceTimer = null;
 
     const steps = ['Ro\'yxatdan o\'ting', 'To\'lov qiling (299,000 so\'m)', 'O\'qishni boshlang'];
 
+    const onUsernameInput = () => {
+      usernameOk.value = false;
+      usernameError.value = '';
+      clearTimeout(debounceTimer);
+
+      const val = form.username.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      form.username = val;
+
+      if (!val) return;
+      if (val.length < 3) { usernameError.value = 'Kamida 3 belgi'; return; }
+      if (!/^[a-z]/.test(val)) { usernameError.value = 'Harf bilan boshlanishi kerak'; return; }
+
+      checkingUsername.value = true;
+      debounceTimer = setTimeout(async () => {
+        try {
+          await api.get(`/auth/check-username?username=${val}`);
+          usernameOk.value = true;
+          usernameError.value = '';
+        } catch (err) {
+          usernameError.value = err.response?.data?.message || 'Band';
+          usernameOk.value = false;
+        } finally {
+          checkingUsername.value = false;
+        }
+      }, 500);
+    };
+
     const submit = async () => {
+      if (usernameError.value) return;
       error.value = '';
       try {
-        await authStore.register(form.name, form.email, form.password);
+        await authStore.register(form.name, form.username, form.email, form.password);
         router.push('/payment');
       } catch (err) {
         error.value = err.response?.data?.message || 'Xato yuz berdi';
       }
     };
 
-    return { authStore, form, error, showPass, steps, submit };
+    return { authStore, form, error, showPass, steps, usernameError, usernameOk, checkingUsername, onUsernameInput, submit };
   }
 };
 </script>
@@ -141,4 +192,12 @@ export default {
 .auth-switch { text-align:center;color:#64748b;font-size:0.9rem;margin-top:1.5rem; }
 .auth-switch a { color:#818cf8;text-decoration:none;font-weight:600; }
 @keyframes orbFloat { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-25px); } }
+.username-hint { font-size:0.75rem; color:#475569; font-weight:400; }
+.input-error { border-color:rgba(239,68,68,0.5) !important; }
+.input-ok { border-color:rgba(16,185,129,0.5) !important; }
+.check-ok { color:#10b981; font-size:0.9rem; }
+.check-err { color:#ef4444; font-size:0.9rem; }
+.check-spinner { color:#818cf8; }
+.field-error { font-size:0.78rem; color:#fca5a5; margin-top:0.3rem; padding-left:0.25rem; }
+.field-ok { font-size:0.78rem; color:#6ee7b7; margin-top:0.3rem; padding-left:0.25rem; }
 </style>

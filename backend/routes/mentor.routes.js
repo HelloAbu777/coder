@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getStudents, getStudent, findUserByEmail } from '../controllers/mentor.controller.js';
+import { getStudents, getStudent, findUserByUsername } from '../controllers/mentor.controller.js';
 import authMiddleware from '../middleware/auth.middleware.js';
 import roleMiddleware from '../middleware/role.middleware.js';
 
@@ -9,6 +9,6 @@ router.use(authMiddleware, roleMiddleware('mentor', 'admin'));
 
 router.get('/students', getStudents);
 router.get('/students/:id', getStudent);
-router.get('/find-user', findUserByEmail);
+router.get('/find-user', findUserByUsername);
 
 export default router;

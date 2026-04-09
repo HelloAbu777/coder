@@ -24,12 +24,12 @@ const getStudent = async (req, res) => {
   }
 };
 
-// @returns {Object} — email orqali foydalanuvchi topish (chat boshlash uchun)
-const findUserByEmail = async (req, res) => {
+// @returns {Object} — username orqali foydalanuvchi topish (chat boshlash uchun)
+const findUserByUsername = async (req, res) => {
   try {
-    const { email } = req.query;
-    if (!email) return res.status(400).json({ message: 'Email kerak' });
-    const user = await User.findOne({ email: email.toLowerCase() }).select('_id name email role level');
+    const { username } = req.query;
+    if (!username) return res.status(400).json({ message: 'Username kerak' });
+    const user = await User.findOne({ username: username.toLowerCase() }).select('_id name username role level');
     if (!user) return res.status(404).json({ message: 'Foydalanuvchi topilmadi' });
     res.json(user);
   } catch (err) {
@@ -37,4 +37,4 @@ const findUserByEmail = async (req, res) => {
   }
 };
 
-export { getStudents, getStudent, findUserByEmail };
+export { getStudents, getStudent, findUserByUsername };

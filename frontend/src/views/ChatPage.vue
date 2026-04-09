@@ -29,16 +29,16 @@
             </button>
           </div>
 
-          <!-- Email orqali topish -->
+          <!-- Username orqali topish -->
           <div class="find-user-box mt-4">
             <p class="small fw-semibold mb-2" style="color:var(--text-muted)">
-              <i class="bi bi-search me-1"></i>Email orqali topish
+              <i class="bi bi-at me-1"></i>Username orqali topish
             </p>
             <div class="find-input-wrap">
               <input
                 v-model="searchEmail"
-                type="email"
-                placeholder="email@example.com"
+                type="text"
+                placeholder="masalan: ali_karimov"
                 @keyup.enter="findUser"
               />
             </div>
@@ -123,7 +123,7 @@ export default {
       foundUser.value = null;
       findLoading.value = true;
       try {
-        const { data } = await api.get(`/mentor/find-user?email=${encodeURIComponent(searchEmail.value)}`);
+        const { data } = await api.get(`/mentor/find-user?username=${encodeURIComponent(searchEmail.value.toLowerCase())}`);
         foundUser.value = data;
         setRoom(`private-${data._id}`, data);
       } catch (err) {

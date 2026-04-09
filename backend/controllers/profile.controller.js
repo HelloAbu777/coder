@@ -4,7 +4,7 @@ import Certificate from '../models/certificate.model.js';
 // @returns {Object} — public profil (username bo'yicha)
 const getPublicProfile = async (req, res) => {
   try {
-    const user = await User.findOne({ name: req.params.username }).select('name level completedSections avatar createdAt');
+    const user = await User.findOne({ username: req.params.username }).select('name username level completedSections avatar createdAt');
     if (!user) return res.status(404).json({ message: 'Foydalanuvchi topilmadi' });
 
     const certificates = await Certificate.find({ user: user._id }).select('section issuedAt uniqueId');
