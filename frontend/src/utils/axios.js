@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+// Development: Vite proxy ishlatadi (/api -> http://localhost:5000/api)
+// Production: VITE_API_URL ishlatadi
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api'
+  baseURL: import.meta.env.PROD 
+    ? (import.meta.env.VITE_API_URL || 'https://coder-backend.onrender.com/api')
+    : '/api'
 });
 
 // Har bir so'rovga token qo'shish

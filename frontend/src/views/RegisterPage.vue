@@ -47,6 +47,7 @@
                 v-model="form.username"
                 type="text"
                 placeholder="masalan: ali_karimov"
+                autocomplete="username"
                 @input="onUsernameInput"
                 required
               />
@@ -61,14 +62,14 @@
             <label>Email</label>
             <div class="auth-input-wrap">
               <i class="bi bi-envelope"></i>
-              <input v-model="form.email" type="email" placeholder="email@example.com" required />
+              <input v-model="form.email" type="email" placeholder="email@example.com" autocomplete="email" required />
             </div>
           </div>
           <div class="auth-field">
             <label>Parol</label>
             <div class="auth-input-wrap">
               <i class="bi bi-lock"></i>
-              <input v-model="form.password" :type="showPass ? 'text' : 'password'" placeholder="Kamida 6 belgi" required minlength="6" />
+              <input v-model="form.password" :type="showPass ? 'text' : 'password'" placeholder="Kamida 6 belgi" autocomplete="new-password" required minlength="6" />
               <button type="button" class="pass-toggle" @click="showPass = !showPass">
                 <i :class="showPass ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
               </button>

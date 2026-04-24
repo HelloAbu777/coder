@@ -47,7 +47,7 @@
             <label>Email</label>
             <div class="auth-input-wrap">
               <i class="bi bi-envelope"></i>
-              <input v-model="form.email" type="email" placeholder="email@example.com" required />
+              <input v-model="form.email" type="email" placeholder="email@example.com" autocomplete="email" required />
             </div>
           </div>
           <div class="auth-field">
@@ -96,10 +96,17 @@ export default {
       error.value = '';
       try {
         const data = await authStore.login(form.email, form.password);
-        if (data.user.role === 'admin') return router.push('/admin');
-        if (data.user.role === 'mentor') return router.push('/mentor');
-        if (!data.user.isPaid) return router.push('/payment');
-        router.push('/dashboard');
+        
+        // Role bo'yicha yo'naltirish
+        if (data.user.role === 'admin') {
+          router.push('/admin');
+        } else if (data.user.role === 'mentor') {
+          router.push('/mentor');
+        } else if (!data.user.isPaid) {
+          router.push('/payment');
+        } else {
+          router.push('/dashboard');
+        }
       } catch (err) {
         error.value = err.response?.data?.message || 'Email yoki parol noto\'g\'ri';
       }

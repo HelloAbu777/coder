@@ -12,11 +12,9 @@ const routes = [
   { path: '/code', component: () => import('../views/CodePage.vue'), meta: { requiresAuth: true, requiresPaid: true } },
   { path: '/certificates', component: () => import('../views/CertificatesPage.vue'), meta: { requiresAuth: true, requiresPaid: true } },
   { path: '/profile/:username', component: () => import('../views/ProfilePage.vue') },
-
-  // Admin — alohida login, foydalanuvchilardan ajratilgan
-  { path: '/admin/login', component: () => import('../views/AdminLoginPage.vue'), meta: { adminLoginPage: true } },
-  { path: '/admin', component: () => import('../views/AdminPage.vue'), meta: { requiresAdmin: true } },
-
+  
+  // Admin va Mentor - oddiy login orqali, role bo'yicha yo'naltiriladi
+  { path: '/admin', component: () => import('../views/AdminPage.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/mentor', component: () => import('../views/MentorPage.vue'), meta: { requiresAuth: true, requiresMentor: true } }
 ];
 
@@ -29,22 +27,28 @@ router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || 'null');
 
-  // Admin login sahifasi — allaqachon admin bo'lsa, to'g'ridan admin ga yo'nalt
-  if (to.meta.adminLoginPage) {
-    if (token && user?.role === 'admin') return next('/admin');
-    return next();
+  // Agar login qilmagan bo'lsa
+  if (to.meta.requiresAuth && !token) {
+    return next('/login');
   }
 
-  // Admin panel — token va admin roli bo'lmasa, admin loginga yo'nalt
-  if (to.meta.requiresAdmin) {
-    if (!token || user?.role !== 'admin') return next('/admin/login');
-    return next();
-  }
+  // Agar login qilgan bo'lsa
+  if (token && user) {
+    // Admin panel - faqat admin kirishi mumkin
+    if (to.meta.requiresAdmin && user.role !== 'admin') {
+      return next('/dashboard');
+    }
 
-  // Oddiy sahifalar
-  if (to.meta.requiresAuth && !token) return next('/login');
-  if (to.meta.requiresPaid && user && !user.isPaid) return next('/payment');
-  if (to.meta.requiresMentor && !['mentor', 'admin'].includes(user?.role)) return next('/dashboard');
+    // Mentor panel - faqat mentor va admin kirishi mumkin
+    if (to.meta.requiresMentor && !['mentor', 'admin'].includes(user.role)) {
+      return next('/dashboard');
+    }
+
+    // To'lov qilmagan student uchun
+    if (to.meta.requiresPaid && user.role === 'student' && !user.isPaid) {
+      return next('/payment');
+    }
+  }
 
   next();
 });

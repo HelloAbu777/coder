@@ -28,6 +28,9 @@
             <div class="mentor-role">Mentor</div>
           </div>
         </div>
+        <button class="logout-btn" @click="logout" title="Chiqish">
+          <i class="bi bi-box-arrow-left"></i>
+        </button>
       </div>
     </aside>
 
@@ -215,6 +218,7 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import ChatBox from '../components/ChatBox.vue';
 import { useAuthStore } from '../store/auth.js';
 import api from '../utils/axios.js';
@@ -224,6 +228,7 @@ export default {
   components: { ChatBox },
   setup() {
     const authStore = useAuthStore();
+    const router = useRouter();
     const students = ref([]);
     const activeTab = ref('students');
     const selectedRoom = ref(null);
@@ -280,6 +285,11 @@ export default {
       selectedStudent.value = student;
     };
 
+    const logout = () => {
+      authStore.logout();
+      router.push('/');
+    };
+
     onMounted(async () => {
       try {
         const { data } = await api.get('/mentor/students');
@@ -290,7 +300,7 @@ export default {
     return {
       authStore, students, activeTab, selectedRoom, selectedStudent,
       searchQuery, navItems, filteredStudents, avgScore, activeStudents,
-      topScorer, topStudents, levelStats, openChat, selectRoom
+      topScorer, topStudents, levelStats, openChat, selectRoom, logout
     };
   }
 };
@@ -373,12 +383,39 @@ export default {
 .sidebar-footer {
   padding: 1rem 1.25rem;
   border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .mentor-info {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.logout-btn {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.2);
+  color: #f87171;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.logout-btn:hover {
+  background: rgba(239,68,68,0.2);
+  border-color: rgba(239,68,68,0.4);
+  color: #fca5a5;
 }
 
 .mentor-avatar {

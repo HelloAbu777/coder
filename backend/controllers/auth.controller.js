@@ -53,6 +53,55 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Admin login (environment variable dan)
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@coders.uz';
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin@2025!Secure';
+
+    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      // Database da admin bormi tekshirish
+      let admin = await User.findOne({ email: ADMIN_EMAIL });
+
+      // Agar yo'q bo'lsa, yaratish
+      if (!admin) {
+        admin = await User.create({
+          name: 'Admin',
+          username: 'admin_coders',
+          email: ADMIN_EMAIL,
+          password: ADMIN_PASSWORD,
+          role: 'admin',
+          isPaid: true,
+          isEmailVerified: true
+        });
+      }
+
+      // Agar mavjud bo'lsa, lekin admin emas bo'lsa, rolni o'zgartirish
+      if (admin.role !== 'admin') {
+        admin.role = 'admin';
+        admin.isPaid = true;
+        await admin.save();
+      }
+
+      const token = generateToken(admin._id);
+
+      return res.json({
+        token,
+        user: {
+          _id: admin._id,
+          name: admin.name,
+          username: admin.username,
+          email: admin.email,
+          role: admin.role,
+          isPaid: admin.isPaid,
+          level: admin.level,
+          totalScore: admin.totalScore,
+          completedVideos: admin.completedVideos,
+          completedQuizzes: admin.completedQuizzes,
+          completedSections: admin.completedSections
+        }
+      });
+    }
+
+    // Oddiy foydalanuvchi login
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: 'Email yoki parol noto\'g\'ri' });
 
@@ -108,12 +157,37 @@ const changePassword = async (req, res) => {
 const checkUsername = async (req, res) => {
   try {
     const { username } = req.query;
-    if (!username || username.length < 3) return res.status(400).json({ message: 'Kamida 3 belgi' });
+    
+    // Validatsiya
+    if (!username) {
+      return res.status(400).json({ available: false, message: 'Username kiritilmagan' });
+    }
+    
+    if (username.length < 3) {
+      return res.status(400).json({ available: false, message: 'Kamida 3 belgi bo\'lishi kerak' });
+    }
+    
+    if (username.length > 20) {
+      return res.status(400).json({ available: false, message: 'Maksimal 20 belgi' });
+    }
+    
+    // Faqat harf, raqam va _ ruxsat etilgan
+    const validPattern = /^[a-z0-9_]+$/;
+    if (!validPattern.test(username)) {
+      return res.status(400).json({ available: false, message: 'Faqat kichik harf, raqam va _ ishlatish mumkin' });
+    }
+    
+    // Database da tekshirish
     const exists = await User.findOne({ username: username.toLowerCase() });
-    if (exists) return res.status(409).json({ message: 'Bu username band' });
-    res.json({ available: true });
+    
+    if (exists) {
+      return res.status(200).json({ available: false, message: 'Bu username band' });
+    }
+    
+    return res.status(200).json({ available: true, message: 'Username mavjud' });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('checkUsername xato:', err);
+    return res.status(500).json({ available: false, message: 'Server xatosi' });
   }
 };
 

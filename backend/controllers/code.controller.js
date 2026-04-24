@@ -66,6 +66,40 @@ const saveFile = async (req, res) => {
   }
 };
 
+// @returns {Object} — loyihani yangilash
+const updateProject = async (req, res) => {
+  try {
+    const project = await CodeProject.findOne({ _id: req.params.id, user: req.user._id });
+    if (!project) return res.status(404).json({ message: 'Loyiha topilmadi' });
+
+    if (req.body.files !== undefined) {
+      project.files = req.body.files;
+    }
+    if (req.body.name) {
+      project.name = req.body.name;
+    }
+
+    await project.save();
+    res.json(project);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @returns {Object} — faylni o'chirish
+const deleteFile = async (req, res) => {
+  try {
+    const project = await CodeProject.findOne({ _id: req.params.id, user: req.user._id });
+    if (!project) return res.status(404).json({ message: 'Loyiha topilmadi' });
+
+    project.files = project.files.filter(f => f.name !== req.params.fileName);
+    await project.save();
+    res.json(project);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // @returns {Object} — loyihani o'chirish
 const deleteProject = async (req, res) => {
   try {
@@ -76,4 +110,4 @@ const deleteProject = async (req, res) => {
   }
 };
 
-export { getProjects, getProject, createProject, saveFile, deleteProject };
+export { getProjects, getProject, createProject, saveFile, updateProject, deleteFile, deleteProject };
